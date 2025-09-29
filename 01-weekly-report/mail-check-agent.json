@@ -1,0 +1,181 @@
+{
+  "name": "mail-check-agent",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Categorize this email:\n\n**From:** {{ $json.from }}\n**Date:** {{ $json.date }}\n**Subject:** {{ $json.subject }}\n**Content:** {{ $json.textHtml }}\nPlease analyze this email and apply appropriate labels using the available tools.",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "입력된 값을 가지고, 아래와 같은 형식으로 json 형식으로 출력을 해 주세요\n시간\n발신자\n내용\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        -176
+      ],
+      "id": "ac1cc67c-c5cf-4be9-85cb-79ffa9009920",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        -176
+      ],
+      "id": "8ca99aaa-167d-4b3c-b272-ccde804c47d8",
+      "name": "Email Trigger (IMAP)",
+      "credentials": {
+        "imap": {
+          "id": "9UtI2tZRxjcPkwTA",
+          "name": "IMAP account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -96,
+        32
+      ],
+      "id": "668fee94-4a06-4b4d-a7e4-bef1fe62d40b",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ryn4cDwwSg9mRuE3",
+          "name": "Google Gemini(PaLM) Api account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE",
+          "mode": "list",
+          "cachedResultName": "개인별주간업무보고",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "시트1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "발신자": "\"카카오팀 <noreply@kakaocorp.com>\""
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "타임",
+              "displayName": "타임",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "발신자",
+              "displayName": "발신자",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "업무내역",
+              "displayName": "업무내역",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        -176
+      ],
+      "id": "7de79334-ea77-4f9d-a006-6cc24228d597",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eidtferlW1VbrDPk",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c099dc7e-a7c4-413e-a619-08a63f9a14da",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14b9001adabf6161d9485d3d927e61058e0a5437f3866bd9ce2e79de5b4d79e2"
+  },
+  "id": "1bMeTwLV8Pr79ZSO",
+  "tags": []
+}
