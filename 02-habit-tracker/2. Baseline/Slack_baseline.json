@@ -1,0 +1,308 @@
+{
+  "name": "Slack_baseline",
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": [
+          "app_mention"
+        ],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        480
+      ],
+      "id": "9223b914-c682-4fc8-926c-97d72e0c65f0",
+      "name": "Slack Trigger",
+      "webhookId": "a39570a4-7871-4257-9290-1d972131cb15",
+      "alwaysOutputData": false,
+      "executeOnce": false,
+      "credentials": {
+        "slackApi": {
+          "id": "MCyYGx8G0do3NaMD",
+          "name": "Slack account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6ea8241d-a070-49f6-84cd-4009a9a1fe80",
+              "name": "bot_id",
+              "value": "A09GUTSAXT2",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -288,
+        480
+      ],
+      "id": "895172c1-22ee-4362-9962-99942bf976ea",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "replies",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $('Slack Trigger').item.json.channel }}",
+          "mode": "id"
+        },
+        "ts": "={{ $('Slack Trigger').item.json.thread_ts || $('Slack Trigger').item.json.ts }}",
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        480
+      ],
+      "id": "a4a344f3-8c4e-4aa8-9d86-17dd26d58404",
+      "name": "Get a thread of messages posted to a channel",
+      "webhookId": "b6b3ee00-9d9b-4200-8ec4-e8854f747431",
+      "credentials": {
+        "slackApi": {
+          "id": "MCyYGx8G0do3NaMD",
+          "name": "Slack account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 첫 메시지의 text에서 봇 ID 추출 (형태: <@U09G1U8HZ6W>)\nconst firstText = $json.text || \"\";\nconst match = firstText.match(/<@([A-Z0-9]+)>/);\nconst botId = match ? match[1] : null;\n\nconst transformedMessages = $input.all().map(item => {\n  const msg = item.json;\n\n  return {\n    role: msg.user === botId ? \"assistant\" : \"user\",\n    content: msg.text?.replaceAll(`<@${botId}>`, '').trim() || ''\n  };\n}).filter(item => item.content);\n\nreturn {\n  messages: JSON.stringify(transformedMessages),\n  botId // 디버깅용으로 추출된 봇 아이디도 함께 반환\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        480
+      ],
+      "id": "8a14914e-5286-4d76-b4fb-63f0b4bdf53c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ JSON.parse($json.messages)[0].content }}",
+        "options": {
+          "systemMessage": "당신은 n8n 자동화 전문 봇입니다.\n사용자의 질문에 친근하고 바로 도움이 되는 방식으로 답변해주세요.(추가정보는 되도록 묻지 마세요)\n\n사용자가 “뉴스/검색”을 요청하면 추가 질문 없이\n마지막 사용자 메시지(멘션 제거)를 그대로 검색어로 사용해라."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        288,
+        480
+      ],
+      "id": "f6826623-0211-460d-af09-62f489ebd44d",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Makes an HTTP request and returns the response data\n\nINPUT KEYWARD에 들어갈 내용으로 검색해줘.\nURL : https://news.google.com/rss/search?q=<INPUT KEYWORD>&hl=ko&gl=KR&ceid=KR%3Ako",
+        "url": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('URL', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        688
+      ],
+      "id": "fa44dea5-4626-473d-aae1-f4d88abac611",
+      "name": "Google News",
+      "notes": "Google News"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://slack.com/api/chat.postMessgae",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "channel",
+              "value": "={{ $('Slack Trigger').first().json.channel }}"
+            },
+            {
+              "name": "thread_ts",
+              "value": "={{ $('Slack Trigger').first().json.ts }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.output }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        480
+      ],
+      "id": "4ad26f45-f13e-4972-bcbe-5d4ef77b44ba",
+      "name": "HTTP Request",
+      "credentials": {
+        "slackApi": {
+          "id": "MCyYGx8G0do3NaMD",
+          "name": "Slack account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "# notion",
+          "mode": "name"
+        },
+        "text": "={{ $('AI Agent1').item.json.output }}",
+        "otherOptions": {
+          "includeLinkToWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        608,
+        336
+      ],
+      "id": "0736e006-d032-4ad5-917f-c5525b721ff5",
+      "name": "Send a message1",
+      "webhookId": "d67832eb-a3b3-4df3-b6f4-5d1c80e22883",
+      "credentials": {
+        "slackApi": {
+          "id": "MCyYGx8G0do3NaMD",
+          "name": "Slack account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        272,
+        688
+      ],
+      "id": "651d662b-2c87-4671-8b26-a881ad4d289e",
+      "name": "Google Gemini Chat Model"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Get a thread of messages posted to a channel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a thread of messages posted to a channel": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google News": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "d56fd2bd-1714-482b-abc4-3591e05daf06",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14b9001adabf6161d9485d3d927e61058e0a5437f3866bd9ce2e79de5b4d79e2"
+  },
+  "id": "Jf3IevOnASZ0c1EB",
+  "tags": []
+}
