@@ -108,20 +108,20 @@
 # 7. 시나리오 다이어그램
 
 **초기 설정 : 습관/알람/업무시간 등**
-![alt text](image.png)
+![alt text](./image/image.png)
 
 **주기적 체크인 알람 & 응답 파싱**
-![alt text](image-2.png)
+![alt text](./image/image-2.png)
 
 **LLM 후속 액션**
-![alt text](image-3.png)
+![alt text](./image/image-3.png)
 
 **노션 동기화**
-![alt text](image-5.png)
+![alt text](./image/image-5.png)
 
 
 **아침 리마인더**
-![alt text](image-7.png)
+![alt text](./image/image-7.png)
 
 
 
