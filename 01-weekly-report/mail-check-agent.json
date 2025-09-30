@@ -7,14 +7,14 @@
         "text": "=Categorize this email:\n\n**From:** {{ $json.from }}\n**Date:** {{ $json.date }}\n**Subject:** {{ $json.subject }}\n**Content:** {{ $json.textHtml }}\nPlease analyze this email and apply appropriate labels using the available tools.",
         "hasOutputParser": true,
         "options": {
-          "systemMessage": "입력된 값을 가지고, 아래와 같은 형식으로 json 형식으로 출력을 해 주세요\n시간\n발신자\n내용\n"
+          "systemMessage": "이메일 내용에서 업무 내용을 정리해 주세요\n업무내용만 출력해주세요"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        48,
-        -176
+        320,
+        -192
       ],
       "id": "ac1cc67c-c5cf-4be9-85cb-79ffa9009920",
       "name": "AI Agent"
@@ -26,7 +26,7 @@
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2.1,
       "position": [
-        -240,
+        -368,
         -176
       ],
       "id": "8ca99aaa-167d-4b3c-b272-ccde804c47d8",
@@ -45,8 +45,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -96,
-        32
+        192,
+        112
       ],
       "id": "668fee94-4a06-4b4d-a7e4-bef1fe62d40b",
       "name": "Google Gemini Chat Model",
@@ -77,7 +77,9 @@
         "columns": {
           "mappingMode": "defineBelow",
           "value": {
-            "발신자": "\"카카오팀 <noreply@kakaocorp.com>\""
+            "타임": "={{ $('Text Classifier').item.json.date }}",
+            "발신자": "={{ $('Text Classifier').item.json.from }}",
+            "업무내역": "={{ $json.output }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -118,8 +120,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        512,
-        -176
+        720,
+        -192
       ],
       "id": "7de79334-ea77-4f9d-a006-6cc24228d597",
       "name": "Append row in sheet",
@@ -127,6 +129,51 @@
         "googleSheetsOAuth2Api": {
           "id": "eidtferlW1VbrDPk",
           "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "={{ $json.date }}\n{{ $json.from }}\n{{ $json.textHtml }}\n{{ $json.textPlain }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "taskai",
+              "description": "주간업무진행 관련된 메일"
+            },
+            {
+              "category": "not taskai",
+              "description": "업무 관련이 아닌 메일"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        -176
+      ],
+      "id": "cc3449c9-aa81-479a-9046-1878d641a058",
+      "name": "Text Classifier"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -128,
+        32
+      ],
+      "id": "7935de08-9d05-48f7-8a2d-8687d4ea48ec",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "ryn4cDwwSg9mRuE3",
+          "name": "Google Gemini(PaLM) Api account 6"
         }
       }
     }
@@ -137,7 +184,7 @@
       "main": [
         [
           {
-            "node": "AI Agent",
+            "node": "Text Classifier",
             "type": "main",
             "index": 0
           }
@@ -165,13 +212,35 @@
           }
         ]
       ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "c099dc7e-a7c4-413e-a619-08a63f9a14da",
+  "versionId": "f2bd8ffb-eabb-46a5-b5e0-38318a908a9d",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "14b9001adabf6161d9485d3d927e61058e0a5437f3866bd9ce2e79de5b4d79e2"
