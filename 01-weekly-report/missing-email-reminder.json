@@ -1,0 +1,194 @@
+{
+  "name": "missing-email-reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 13
+            },
+            {
+              "triggerAtHour": 19
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -496,
+        -64
+      ],
+      "id": "109767cd-0153-4a8d-a713-8e6cced60723",
+      "name": "Schedule Trigger (Daily 6PM)"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE",
+          "mode": "list",
+          "cachedResultName": "개인별주간업무보고",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "시트1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -304,
+        -64
+      ],
+      "id": "f960ba0a-6c59-480b-92a3-277e3f552e9d",
+      "name": "Read Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "eidtferlW1VbrDPk",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 등록된 팀원 이메일 목록 (여기에 팀원 이메일 추가)\nconst teamMembers = [\n  { name: '제니', email: 'ibebrain@gmail.com' },\n  { name: '영광', email: 'yk.kim@modulabs.co.kr' },\n  { name: '지현', email: 'goyangi100@gmail.com' },\n  { name: '설화', email: 'kimgod30@gmail.com' },\n  { name: '영태', email: 'youngtae0818@naver.com' },\n  { name: '상연', email: 'play1204dev@gmail.com ' }\n  // 필요한 팀원 추가\n];\n\n// 오늘 날짜 (YYYY-MM-DD 형식)\nconst today = new Date();\nconst todayStr = today.toISOString().split('T')[0]; // YYYY-MM-DD\n\n// 구글 시트에서 읽은 데이터\nconst sheetData = $input.all();\n\n// 오늘 메일을 보낸 팀원의 이메일 추출\nconst todayEmails = sheetData\n  .filter(item => {\n    const rowDate = item.json['타임'];\n    // 타임 필드가 날짜 형식인지 확인 (YYYY-MM-DD 또는 ISO 8601 형식)\n    if (!rowDate) return false;\n    \n    // 날짜 파싱 (다양한 형식 지원)\n    const rowDateObj = new Date(rowDate);\n    const rowDateStr = rowDateObj.toISOString().split('T')[0];\n    \n    return rowDateStr === todayStr;\n  })\n  .map(item => {\n    const from = item.json['발신자'];\n    // 이메일 주소 추출 (\"Name <email@example.com>\" 형식 처리)\n    const emailMatch = from.match(/<([^>]+)>/);\n    return emailMatch ? emailMatch[1] : from;\n  });\n\n// 중복 제거\nconst uniqueTodayEmails = [...new Set(todayEmails)];\n\n// 오늘 메일을 보내지 않은 팀원 찾기\nconst missingMembers = teamMembers.filter(member => \n  !uniqueTodayEmails.includes(member.email)\n);\n\n// 결과 반환 (메일을 보내지 않은 팀원만)\nreturn missingMembers.map(member => ({\n  json: {\n    name: member.name,\n    email: member.email,\n    date: todayStr,\n    message: `${member.name}님, 오늘 업무 보고 메일을 보내지 않으셨습니다. taskai@kakao.com 메일로 업무 내용을 보내주세요.`\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        -64
+      ],
+      "id": "20b36560-2eac-43f4-85a4-de534f98a208",
+      "name": "Check Missing Members"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-missing-members",
+              "leftValue": "={{ $json.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        -64
+      ],
+      "id": "096be301-2c8c-454e-a44e-f9944aba93ab",
+      "name": "Filter Missing Members"
+    },
+    {
+      "parameters": {
+        "fromEmail": "taskai@kakao.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "[알림] 오늘 업무 보고 메일 미제출",
+        "html": "={{ $json.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        -64
+      ],
+      "id": "db308e20-276c-4d8c-9b52-f9519448044e",
+      "name": "Send Reminder Email",
+      "webhookId": "8659b7b3-905e-4f1b-9249-e2297225382d",
+      "credentials": {
+        "smtp": {
+          "id": "Uijmzhl3X5LdgKIX",
+          "name": "SMTP account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger (Daily 6PM)": {
+      "main": [
+        [
+          {
+            "node": "Read Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "Check Missing Members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Missing Members": {
+      "main": [
+        [
+          {
+            "node": "Filter Missing Members",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Missing Members": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reminder Email": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "4c0c3773-19a4-4745-9dea-29097964c306",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14b9001adabf6161d9485d3d927e61058e0a5437f3866bd9ce2e79de5b4d79e2"
+  },
+  "id": "R5XTbVzcJKvZzDh0",
+  "tags": []
+}
