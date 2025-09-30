@@ -21,7 +21,9 @@
     },
     {
       "parameters": {
-        "options": {}
+        "options": {
+          "forceReconnect": 60
+        }
       },
       "type": "n8n-nodes-base.emailReadImap",
       "typeVersion": 2.1,
@@ -240,7 +242,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "f2bd8ffb-eabb-46a5-b5e0-38318a908a9d",
+  "versionId": "090a1cbe-1c77-454f-a80c-fbea9e359d13",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "14b9001adabf6161d9485d3d927e61058e0a5437f3866bd9ce2e79de5b4d79e2"
