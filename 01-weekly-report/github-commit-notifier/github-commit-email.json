@@ -1,0 +1,150 @@
+{
+  "name": "github-commit-email-notifier",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        240
+      ],
+      "id": "webhook-github",
+      "name": "GitHub Webhook",
+      "webhookId": "github-commit-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.ref }}",
+              "operation": "contains",
+              "value2": "refs/heads/main"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        240
+      ],
+      "id": "filter-main-branch",
+      "name": "Filter Main Branch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const commits = $input.item.json.commits || [];\nconst repository = $input.item.json.repository;\nconst pusher = $input.item.json.pusher;\nconst ref = $input.item.json.ref;\nconst branch = ref.split('/').pop();\n\nlet emailBody = `<h2>New commits pushed to ${repository.full_name}</h2>`;\nemailBody += `<p><strong>Branch:</strong> ${branch}</p>`;\nemailBody += `<p><strong>Pushed by:</strong> ${pusher.name}</p>`;\nemailBody += `<p><strong>Repository:</strong> <a href=\"${repository.html_url}\">${repository.full_name}</a></p>`;\nemailBody += `<hr>`;\n\nif (commits.length === 0) {\n  emailBody += `<p>No commits in this push.</p>`;\n} else {\n  emailBody += `<h3>Commits (${commits.length})</h3>`;\n  \n  commits.forEach(commit => {\n    emailBody += `<div style=\"margin-bottom: 20px; padding: 10px; border-left: 3px solid #0366d6;\">`;\n    emailBody += `<p><strong>Commit:</strong> <a href=\"${commit.url}\">${commit.id.substring(0, 7)}</a></p>`;\n    emailBody += `<p><strong>Author:</strong> ${commit.author.name} (${commit.author.email})</p>`;\n    emailBody += `<p><strong>Message:</strong> ${commit.message}</p>`;\n    emailBody += `<p><strong>Timestamp:</strong> ${commit.timestamp}</p>`;\n    \n    if (commit.added && commit.added.length > 0) {\n      emailBody += `<p><strong>Added files:</strong> ${commit.added.join(', ')}</p>`;\n    }\n    if (commit.modified && commit.modified.length > 0) {\n      emailBody += `<p><strong>Modified files:</strong> ${commit.modified.join(', ')}</p>`;\n    }\n    if (commit.removed && commit.removed.length > 0) {\n      emailBody += `<p><strong>Removed files:</strong> ${commit.removed.join(', ')}</p>`;\n    }\n    emailBody += `</div>`;\n  });\n}\n\nemailBody += `<hr>`;\nemailBody += `<p style=\"color: #666; font-size: 12px;\">This is an automated notification from n8n GitHub Commit Notifier</p>`;\n\nreturn {\n  json: {\n    emailSubject: `[${repository.name}] ${commits.length} new commit(s) to ${branch}`,\n    emailBody: emailBody,\n    repositoryName: repository.name,\n    branch: branch,\n    commitCount: commits.length,\n    pusherName: pusher.name\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        240
+      ],
+      "id": "format-email",
+      "name": "Format Email Content"
+    },
+    {
+      "parameters": {
+        "fromEmail": "your-email@example.com",
+        "toEmail": "recipient@example.com",
+        "subject": "={{ $json.emailSubject }}",
+        "emailType": "html",
+        "message": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        400,
+        240
+      ],
+      "id": "send-email",
+      "name": "Send Email",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_WITH_YOUR_SMTP_CREDENTIAL_ID",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"success\", \"message\": \"Email sent for \" + $json.commitCount + \" commits\" } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        640,
+        240
+      ],
+      "id": "respond-webhook",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "GitHub Webhook": {
+      "main": [
+        [
+          {
+            "node": "Filter Main Branch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Main Branch": {
+      "main": [
+        [
+          {
+            "node": "Format Email Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email Content": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "new-workflow",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "tags": []
+}
