@@ -12,14 +12,16 @@ The repository contains two main automation projects:
 
 ### 1. AI Weekly Report Generator (`01-weekly-report/`)
 - **Purpose**: Automatically generates weekly work reports and KPT retrospectives from email content
-- **Main workflow**: [mail-check-agent.json](01-weekly-report/mail-check-agent.json)
+- **Workflows**:
+  - [mail-check-agent.json](01-weekly-report/mail-check-agent.json) - Main email processing workflow
+  - [missing-email-reminder.json](01-weekly-report/missing-email-reminder.json) - Reminder workflow when no input detected
 - **Tech stack**: n8n, Google Gemini, Google Sheets (for data storage), IMAP (for email)
 - **Key features**:
-  - Monitors email inbox via IMAP trigger
+  - Monitors email inbox (robertchoi@gachon.ac.kr) via IMAP trigger
   - Uses AI agent to extract and categorize work content from emails
   - Stores processed data in Google Sheets document (ID: `1raa1jSgJJ-foN0ILnL1wAKr55w-BBLSOjhTNPQe06aE`)
   - Scheduled to run automatically on Friday evenings
-  - Sends reminder emails if no data input is detected
+  - Sends reminder emails if no data input is detected (separate workflow)
 
 ### 2. Habit Tracker Agent (`02-habit-tracker/`)
 - **Purpose**: Personalized habit tracking system for solopreneurs with variable schedules
@@ -38,6 +40,8 @@ The repository contains two main automation projects:
 1. Open n8n workflow editor
 2. Click `…` (top right) > `Import from File`
 3. Select the JSON workflow file
+4. Update all credential references to match your n8n instance
+5. Test workflow using n8n's "Execute Workflow" button before activating
 
 ### Workflow JSON Structure
 - n8n workflows are stored as JSON files containing:
@@ -59,7 +63,8 @@ The repository contains two main automation projects:
 ### Credential Management
 - Credentials (API keys, OAuth tokens) are referenced by ID in workflow JSON but stored separately in n8n
 - When modifying workflows, credential IDs must be updated to match the target n8n instance
-- See [Base Model 세팅 가이드라인.md](02-habit-tracker/2.%20Baseline/Base%20Model%20세팅%20가이드라인.md) for Slack setup details
+- **IMPORTANT**: Never commit actual credentials to the repository - only workflow JSON files with credential references
+- See [Base Model 세팅 가이드라인.md](02-habit-tracker/2.%20Baseline/Base%20Model%20세팅%20가이드라인.md) for detailed Slack setup guide
 
 ## Setting Up Projects
 
@@ -100,17 +105,24 @@ Email (IMAP) → AI Agent (Gemini) → Text Classification → Google Sheets App
 ### Slack Bot Flow (Habit Tracker)
 Slack Trigger (app_mention) → Edit Fields (bot_id) → Get Thread → JavaScript Transform → AI Agent → Response
 
-## Common Development Tasks
+## Modifying Workflows
 
-When modifying workflows:
+### Editing Existing Workflows
 1. **Read the existing JSON** to understand node structure and data flow
-2. **Update node parameters** for configuration changes
-3. **Preserve credential references** (update IDs as needed)
-4. **Test in n8n editor** before committing JSON
-5. **Document changes** in PRD.md files if requirements change
+2. **Make changes in n8n editor** (not directly in JSON) for complex modifications
+3. **Export updated workflow** via `…` > `Export Workflow` (exports as JSON)
+4. **Replace the old JSON file** in the repository
+5. **Test thoroughly** using "Execute Workflow" in n8n before committing
+6. **Document changes** in PRD.md files if requirements change
 
-When adding new integrations:
-1. Check n8n documentation for node types
-2. Add required OAuth scopes (for Slack, Google APIs)
-3. Update setup guides if new credentials are needed
-4. Test webhook/trigger functionality before deployment
+### Adding New Integrations
+1. Check n8n documentation for available node types
+2. Add required OAuth scopes (for Slack: see setup guide; for Google APIs: configure in Google Cloud Console)
+3. Update setup documentation if new credentials are needed
+4. Test webhook/trigger functionality before activating workflow
+
+### Debugging Workflows
+- Use n8n's "Execute Workflow" button to test manually
+- Check execution history in n8n for failed runs
+- Enable "Always Output Data" in node settings to debug data flow
+- Use "Edit Fields" or "Code" nodes to log intermediate values

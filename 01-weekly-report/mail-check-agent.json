@@ -22,7 +22,7 @@
     {
       "parameters": {
         "options": {
-          "forceReconnect": 60
+          "forceReconnect": 3600
         }
       },
       "type": "n8n-nodes-base.emailReadImap",
