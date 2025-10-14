@@ -1,0 +1,256 @@
+{
+  "name": "수신 메일 구글시트에 정리하는 에이전트",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.1,
+      "position": [
+        -384,
+        -176
+      ],
+      "id": "1b5ec832-91b3-4e27-898c-febebd99650b",
+      "name": "Fetch Incoming Email",
+      "credentials": {
+        "imap": {
+          "id": "W4woBrOjXo1lIGJk",
+          "name": "IMAP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.textPlain || \"\";\nconst lines = body.split(\"\\n\").map(l => l.trim());\n\nlet did = \"\";\nlet todo = \"\";\nlet problem = \"\";\n\n// 본문 파싱 함수\nfunction extractContent(line, nextLine) {\n  if (line.includes(\":\")) {\n    return line.split(\":\").slice(1).join(\":\").trim();\n  }\n  if (nextLine && nextLine.startsWith(\"-\")) {\n    return nextLine.replace(/^-/, \"\").trim();\n  }\n  if (nextLine) {\n    return nextLine.trim();\n  }\n  return \"\";\n}\n\nfor (let i = 0; i < lines.length; i++) {\n  const line = lines[i];\n  const nextLine = lines[i + 1];\n\n  if (line.startsWith(\"1.\") || line.includes(\"(Did)\")) {\n    did = extractContent(line, nextLine);\n  } else if (line.startsWith(\"2.\") || line.includes(\"(TO-Do)\")) {\n    todo = extractContent(line, nextLine);\n  } else if (line.startsWith(\"3.\") || line.includes(\"(Problem)\")) {\n    problem = extractContent(line, nextLine);\n  }\n}\n\n// 보낸 사람 파싱 (이름 / 이메일)\nconst from = $input.first().json.from || \"\";\nlet name = \"\";\nlet email = \"\";\n\nconst match = from.match(/(.*)<(.*)>/);\nif (match) {\n  name = match[1].trim();\n  email = match[2].trim();\n} else {\n  email = from.trim();\n}\n\n// 날짜 변환 (YYYY-MM-DD)\nconst rawDate = new Date($input.first().json.date);\nconst date = rawDate.toISOString().split(\"T\")[0];\n\nreturn [{\n  json: {\n    name,\n    email,\n    date,   // 변환된 날짜\n    did,\n    todo,\n    problem,\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        -176
+      ],
+      "id": "f214c1aa-d203-4219-be4b-081e2788d22b",
+      "name": "Parse Work Report Content"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1O-Neb08ZvNQJRg-zJhIHBJQnlBeFp0EnHulzIxKubtc",
+          "mode": "list",
+          "cachedResultName": "주간업무보고_집계시트",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1O-Neb08ZvNQJRg-zJhIHBJQnlBeFp0EnHulzIxKubtc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "시트1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1O-Neb08ZvNQJRg-zJhIHBJQnlBeFp0EnHulzIxKubtc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "did": "={{ $json.did }}",
+            "todo": "={{ $json.todo }}",
+            "problem": "={{ $json.problem }}",
+            "name": "={{ $json.name }}",
+            "email": "={{ $json.email }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "did",
+              "displayName": "did",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "todo",
+              "displayName": "todo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "problem",
+              "displayName": "problem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        80,
+        -224
+      ],
+      "id": "8a03dc09-3eaf-4b33-ae90-53eb00644091",
+      "name": "Append Daily Report",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ADzpvtVWZXC2P7Rx",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1O-Neb08ZvNQJRg-zJhIHBJQnlBeFp0EnHulzIxKubtc",
+          "mode": "list",
+          "cachedResultName": "주간업무보고_집계시트",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1O-Neb08ZvNQJRg-zJhIHBJQnlBeFp0EnHulzIxKubtc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2011727439,
+          "mode": "list",
+          "cachedResultName": "마스터명단",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1O-Neb08ZvNQJRg-zJhIHBJQnlBeFp0EnHulzIxKubtc/edit#gid=2011727439"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $json.name }}",
+            "email": "={{ $json.email }}"
+          },
+          "matchingColumns": [
+            "name"
+          ],
+          "schema": [
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        80,
+        -80
+      ],
+      "id": "00428705-f884-4a74-b7bd-22f9cea760ab",
+      "name": "Update Master Roster",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ADzpvtVWZXC2P7Rx",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Fetch Incoming Email": {
+      "main": [
+        [
+          {
+            "node": "Parse Work Report Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Work Report Content": {
+      "main": [
+        [
+          {
+            "node": "Append Daily Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update Master Roster",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "bb1391f7-a46b-46fd-9c1f-3ebca2e61cfc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "14b9001adabf6161d9485d3d927e61058e0a5437f3866bd9ce2e79de5b4d79e2"
+  },
+  "id": "ytKKsYygBmWuIZEp",
+  "tags": []
+}
